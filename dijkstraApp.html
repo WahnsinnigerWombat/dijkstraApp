@@ -52,21 +52,24 @@
         createNode(event){
             const target = event.target
 
+            //on left mouse button
             if(event.button == 0){
+                //creates a new node
                 if(target.className=='graphDisplay'){
                     this.setState({nodes: [...this.state.nodes,<Node key={nodeCounter} counter={nodeCounter++} position={vektor(event.nativeEvent.offsetX+20,event.nativeEvent.offsetY+20)}/>]})
                 }
 
                 if(target.className=='node'){
                     if(target.style.backgroundColor=='transparent'){
-                        //lineMode
                         if(!dijkstraSelectMode){
+                            //create new line
                             const line = drawLine(target)
                             if(line != undefined){
                                 this.setState({lines: [...this.state.lines,line]})
                                 target.style.backgroundColor='transparent'
                             }
                         } else {
+                            //apply dijkstra algorithm
                             getDijkstra(target)
                         }
                     } else{
@@ -75,7 +78,9 @@
                 }
             }
 
+            //on right mouse button
             if(event.button == 2 && target.className=='node'){
+                //remove existing node
                 if(!dijkstraSelectMode){
                     let tempNodes = [...this.state.nodes]
                     this.setState({nodes: [...this.state.nodes].filter((node)=>node.props.counter !=event.target.textContent.substring(1))})
@@ -128,6 +133,7 @@
         return {x: x,y: y}
     }
 
+    //draw a line between two nodes
     let node1 = undefined
     function drawLine(node){
         node.style.backgroundColor= lineModeColor
@@ -179,6 +185,7 @@
                 pointerEvents: 'none'
             }
 
+            //get user input for line weight
             let lineLength = prompt('Enter a length','0')
             
             //gets the order of both nodes
@@ -196,6 +203,7 @@
                 htmlLine = <div id = {`Line${node2Order}-${node1Order}`} style = {lineStyle} linelength = {lineLength}>{lineLength}</div>
             }
 
+            //reset node1
             node1.style.backgroundColor='transparent'
             node1 = undefined
 
@@ -204,6 +212,7 @@
         return undefined
     }
 
+    //applies the dijkstra algorithm 
     let startNode = undefined
     function getDijkstra(node){
         if(startNode==undefined){
@@ -312,6 +321,7 @@
         return createVertex(tempVertex,lowestWeight+preVertex.traveledWeight)
     }
 
+    //Switch between Dijkstra and Line Mode
     function changeMode(event){
         if(!dijkstraSelectMode){
             dijkstraSelectMode = true
