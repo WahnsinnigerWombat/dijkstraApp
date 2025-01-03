@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<meta charset=utf-8>
+<link rel="stylesheet" href="dijkstraStyle.css">
+
+<script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/babel-standalone@6/babel.min.js" crossorigin></script>
+<title>Dijkstra App</title>
+
+<body>
+    <h1>Dijkstra App</h1>
+    <div id=root> 
+    </div>
+    <label id="modeLabel">LineMode</label>
+    <input type="button" value="Change Mode" class="dijkstraButton" onclick="changeMode(event)">
+</body>
+
+<script type=text/babel>
+    const lineModeColor = 'orange'
+    const dijkstraStartColor = 'lightgreen'
+    const dijkstraEndColor = 'red'
+    const paintedColor = 'green'
+
+    let adjacencyMatrix = []
+
+    let dijkstraSelectMode = false
+
+    let nodeCounter = 0
+
+	class GraphDisplay extends React.Component{
+        constructor(props){
+            super(props)
+            this.state = {nodes: [], lines: []}
+            this.createNode = this.createNode.bind(this)
+            this.displayStyles={
+                borderStyle: 'solid',
+                borderColor: 'aqua',
+                height: '400px',
+                width: '600px'
+            }
+        }
+     
+        render(){
+            return(
+                <div className={'graphDisplay'} style={this.displayStyles} onMouseUp={this.createNode}>
+                    {this.state.nodes}
+                    {this.state.lines}
+                </div>
+            ) 
+        }
+
+        createNode(event){
+            const target = event.target
+
+            if(event.button == 0){
+                if(target.className=='graphDisplay'){
+                    this.setState({nodes: [...this.state.nodes,<Node key={nodeCounter} counter={nodeCounter++} position={vektor(event.nativeEvent.offsetX+20,event.nativeEvent.offsetY+20)}/>]})
+                }
+
+                if(target.className=='node'){
+                    if(target.style.backgroundColor=='transparent'){
+                        //lineMode
+                        if(!dijkstraSelectMode){
+                            const line = drawLine(target)
+                            if(line != undefined){
+                                this.setState({lines: [...this.state.lines,line]})
+                                target.style.backgroundColor='transparent'
+                            }
+                        } else {
+                            getDijkstra(target)
+                        }
+                    } else{
+                        target.style.backgroundColor='transparent'
+                    }
+                }
+            }
+
+            if(event.button == 2 && target.className=='node'){
+                if(!dijkstraSelectMode){
+                    let tempNodes = [...this.state.nodes]
+                    this.setState({nodes: [...this.state.nodes].filter((node)=>node.props.counter !=event.target.textContent.substring(1))})
+                }
+            }
+        }
+    }
+    
+    class Node extends React.Component{
+        constructor(props){
+            super(props)
+            this.vektor=props.position
+            this.counter=props.counter
+            this.state={color: 'transparent'}
+        }
+
+        render(){
+            const nodeStyles = {
+                borderStyle: 'solid',
+                borderColor: 'black',
+                backgroundColor: this.state.color,
+                height: '40px',
+                lineHeight: '38px',
+                width: '40px',
+                borderRadius: '40px',
+                position: 'relative',
+                top: `${this.vektor.y}px`,
+                left: `${this.vektor.x}px`,
+                margin: '-46px',
+                textAlign: 'center',
+                fontSize: '20px'
+            }
+
+            //Creates an entry for the new node in the adjacencyMatrix and fills it with zeros
+            //Additionally updated all existing entrys by adding a zero to them
+            for(const value of adjacencyMatrix){
+                value.push(0)
+            }
+            let newNodeAdjacency = [0]
+            for(let i=0; i<adjacencyMatrix.length; i++){
+                newNodeAdjacency.push(0)
+            }
+            adjacencyMatrix.push(newNodeAdjacency)
+
+            return <div id={`Node${this.counter}`} className={'node'} style={nodeStyles}>{`x${this.counter}`}</div>
+        }
+    }
+
+    function vektor(x,y){
+        return {x: x,y: y}
+    }
+
+    let node1 = undefined
+    function drawLine(node){
+        node.style.backgroundColor= lineModeColor
+        if(node1 == undefined){
+            node1 = node
+        } else {
+            const node2 = node
+
+            const lineHeight = 2
+
+            let x1 = parseInt(node1.style.left) - 23
+            let y1 = parseInt(node1.style.top) + 22.5
+            
+            let x2 = parseInt(node2.style.left) - 23
+            let y2 = parseInt(node2.style.top) + 22.5
+
+            let length = Math.sqrt(((x2-x1) * (x2-x1)) + ((y2-y1) * (y2-y1))) - 42
+
+            let cx = ((x1 + x2) / 2) - (length / 2) + 2
+            let cy = ((y1 + y2) / 2) - (lineHeight / 2)
+
+            let angle = Math.atan2((y1-y2),(x1-x2))*(180/Math.PI)
+
+            //prevents the text on the lines to be displayed facing downwards
+            if (angle>90){
+                angle -=180
+            } else if(angle<-90) {
+                angle +=180
+            }
+
+            const lineStyle = {
+                padding: '0px',
+                margin: '-2px',
+                height: `${lineHeight}px`,
+                backgroundColor: 'black',
+                lineHeight:'24px',
+                position: 'relative',
+                left: `${cx}px`,
+                top: `${cy}px`,
+                width: `${length}px`,
+                MozTransform: `rotate(${angle}deg)`,
+                Webkittransform: `rotate(${angle}deg)`,
+                OTransform: `rotate(${angle}deg)`,
+                MsTransform: `rotate(${angle}deg)`,
+                transform: `rotate(${angle}deg)`,
+                textAlign: 'center',
+                fontSize: '22px',
+                color: 'red',
+                pointerEvents: 'none'
+            }
+
+            let lineLength = prompt('Enter a length','0')
+            
+            //gets the order of both nodes
+            const node1Order = node1.textContent.substring(1)
+            const node2Order = node2.textContent.substring(1)
+
+            //update the adjcencyMatrix to include the distance between these nodes
+            adjacencyMatrix[node1Order][node2Order] = parseInt(lineLength)
+            adjacencyMatrix[node2Order][node1Order] = parseInt(lineLength)
+            
+            let htmlLine = undefined
+            if(node1Order<node2Order){
+                htmlLine = <div id = {`Line${node1Order}-${node2Order}`} style = {lineStyle} linelength = {lineLength}>{lineLength}</div>
+            } else {
+                htmlLine = <div id = {`Line${node2Order}-${node1Order}`} style = {lineStyle} linelength = {lineLength}>{lineLength}</div>
+            }
+
+            node1.style.backgroundColor='transparent'
+            node1 = undefined
+
+            return htmlLine
+        }
+        return undefined
+    }
+
+    let startNode = undefined
+    function getDijkstra(node){
+        if(startNode==undefined){
+            node.style.backgroundColor=dijkstraStartColor
+            startNode = node
+        } else {
+            node.style.backgroundColor=dijkstraEndColor
+            const endNode = node
+
+            //gets the order of both nodes
+            const startOrder = parseInt(startNode.textContent.substring(1))
+            const endOrder = parseInt(endNode.textContent.substring(1))
+            
+            let paintedVertices = []
+            let paintedEdges = []
+
+            //create start vertex
+            const startVertex = createVertex(startOrder,0)
+            
+            //remove start vertex from matrix
+            for(let i=0;i<adjacencyMatrix.length;i++){
+                adjacencyMatrix[i][startOrder] = 0
+            }
+
+            //add vertex to tinged vertexes
+            paintedVertices.push(startVertex)
+            document.getElementById(`Node${startVertex.order}`).style.borderColor=paintedColor
+
+            let endReached = false
+            do{
+                let lightestVertex = createVertex(-1,-1)
+                let previousVertex = createVertex(-1,-1)
+                //iterate through all tinged vertexes
+                for (const paintedVertex of paintedVertices) {
+                    //get the lowest weighted vertex, adjacent to the tinged vertex
+                    let tempVertex = getLowest(adjacencyMatrix[paintedVertex.order], paintedVertex)
+
+                    //only do this if a vertex was actually returned by the get lowest method (default case is -1)
+                    if (tempVertex.order != -1) {
+                        //if lightest vertex wasn't replaced yet, replace it with the current vertex
+                        if (lightestVertex.order == -1) {
+                            lightestVertex = tempVertex;
+                            previousVertex = paintedVertex;
+                        } else {
+                            //if lightest vertex has been replaced, only replace it, if lighter
+                            if (tempVertex.traveledWeight < lightestVertex.traveledWeight) {
+                                lightestVertex = tempVertex;
+                                previousVertex = paintedVertex;
+                            }
+                        }
+                    }
+                }
+                //remove vertex from matrix (but only the connections to the vertex, not from it)
+                for (let i = 0; i < adjacencyMatrix.length; i++) {
+                    adjacencyMatrix[i][lightestVertex.order] = 0;
+                }
+
+                paintedVertices.push(lightestVertex)
+                document.getElementById(`Node${lightestVertex.order}`).style.borderColor=paintedColor
+
+
+                let currEdge = createEdge(previousVertex,lightestVertex)
+                paintedEdges.push(currEdge) 
+                if(previousVertex.order<lightestVertex.order){
+                    document.getElementById(`Line${previousVertex.order}-${lightestVertex.order}`).style.backgroundColor=paintedColor
+                }else{
+                    document.getElementById(`Line${lightestVertex.order}-${previousVertex.order}`).style.backgroundColor=paintedColor
+                }
+
+                if(lightestVertex.order == endOrder){
+                    endReached = true
+                }
+            }while(!endReached)
+
+            console.log(paintedEdges)
+        }
+    }
+
+    function createVertex(order, traveledWeight){
+        return {order: order, traveledWeight: traveledWeight}
+    }
+
+    function createEdge(vertex1,vertex2){
+        return {vertex1: vertex1,vertex2: vertex2}
+    }
+
+    function getLowest(row, preVertex){
+        let lowestWeight = -1
+        let tempVertex = -1
+
+        for(let i=0;i<adjacencyMatrix.length;i++){
+            let currWeight = row[i]
+            if(lowestWeight == -1){
+                if(currWeight > 0){
+                    lowestWeight = currWeight
+                    tempVertex = i
+                }
+            } else {
+                if(currWeight > 0 && currWeight < lowestWeight){
+                    lowestWeight = currWeight
+                    tempVertex = i
+                }
+            }
+        }
+
+        return createVertex(tempVertex,lowestWeight+preVertex.traveledWeight)
+    }
+
+    function changeMode(event){
+        if(!dijkstraSelectMode){
+            dijkstraSelectMode = true
+            document.getElementById('modeLabel').innerText='Dijkstra Mode'
+        } else {
+            dijkstraSelectMode = false
+            document.getElementById('modeLabel').innerText='Line Mode'
+        }
+    }
+    
+    ReactDOM.render(<GraphDisplay/>,document.getElementById('root'))
+
+</script>

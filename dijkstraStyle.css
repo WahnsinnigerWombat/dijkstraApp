@@ -1,0 +1,16 @@
+body{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+
+	margin: 0 auto;
+		
+    height:100vh;
+
+	font-family: "Georgia", sans-serif;
+
+	/*line-height: 1.5; 
+	padding: 2em 1em 0em;
+	color: #555;*/
+}
